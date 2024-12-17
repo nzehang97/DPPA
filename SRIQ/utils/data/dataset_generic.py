@@ -24,7 +24,7 @@ def save_splits(split_datasets, column_keys, filename, boolean_style=False):
 		index = df.values.tolist()
 		one_hot = np.eye(len(split_datasets)).astype(bool)
 		bool_array = np.repeat(one_hot, [len(dset) for dset in split_datasets], axis=0)
-		df = pd.DataFrame(bool_array, index=index, columns = ['train', 'val', 'test'])
+		df = pd.DataFrame(bool_array, index=index, columns = ['train', 'val', 'sift_test'])
 
 	df.to_csv(filename)
 	print()
@@ -249,10 +249,10 @@ class Generic_WSI_Classification_Dataset(Dataset):
 		
 		else:
 			assert csv_path 
-			all_splits = pd.read_csv(csv_path, dtype=self.slide_data['slide_id'].dtype)  # Without "dtype=self.slide_data['slide_id'].dtype", read_csv() will convert all-number columns to a numerical type. Even if we convert numerical columns back to objects later, we may lose zero-padding in the process; the columns must be correctly read in from the get-go. When we compare the individual train/val/test columns to self.slide_data['slide_id'] in the get_split_from_df() method, we cannot compare objects (strings) to numbers or even to incorrectly zero-padded objects/strings. An example of this breaking is shown in https://github.com/andrew-weisman/clam_analysis/tree/main/datatype_comparison_bug-2021-12-01.
+			all_splits = pd.read_csv(csv_path, dtype=self.slide_data['slide_id'].dtype)  # Without "dtype=self.slide_data['slide_id'].dtype", read_csv() will convert all-number columns to a numerical type. Even if we convert numerical columns back to objects later, we may lose zero-padding in the process; the columns must be correctly read in from the get-go. When we compare the individual train/val/sift_test columns to self.slide_data['slide_id'] in the get_split_from_df() method, we cannot compare objects (strings) to numbers or even to incorrectly zero-padded objects/strings. An example of this breaking is shown in https://github.com/andrew-weisman/clam_analysis/tree/main/datatype_comparison_bug-2021-12-01.
 			train_split = self.get_split_from_df(all_splits, 'train')
 			val_split = self.get_split_from_df(all_splits, 'val')
-			test_split = self.get_split_from_df(all_splits, 'test')
+			test_split = self.get_split_from_df(all_splits, 'sift_test')
 			
 		return train_split, val_split, test_split
 
@@ -269,7 +269,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
 
 		if return_descriptor:
 			index = [list(self.label_dict.keys())[list(self.label_dict.values()).index(i)] for i in range(self.num_classes)]
-			columns = ['train', 'val', 'test']
+			columns = ['train', 'val', 'sift_test']
 			df = pd.DataFrame(np.full((len(index), len(columns)), 0, dtype=np.int32), index= index,
 							columns= columns)
 
@@ -292,13 +292,13 @@ class Generic_WSI_Classification_Dataset(Dataset):
 				df.loc[index[u], 'val'] = counts[u]
 
 		count = len(self.test_ids)
-		print('\nnumber of test samples: {}'.format(count))
+		print('\nnumber of sift_test samples: {}'.format(count))
 		labels = self.getlabel(self.test_ids)
 		unique, counts = np.unique(labels, return_counts=True)
 		for u in range(len(unique)):
 			print('number of samples in cls {}: {}'.format(unique[u], counts[u]))
 			if return_descriptor:
-				df.loc[index[u], 'test'] = counts[u]
+				df.loc[index[u], 'sift_test'] = counts[u]
 
 		assert len(np.intersect1d(self.train_ids, self.test_ids)) == 0
 		assert len(np.intersect1d(self.train_ids, self.val_ids)) == 0
@@ -313,7 +313,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
 		test_split = self.get_list(self.test_ids)
 		df_tr = pd.DataFrame({'train': train_split})
 		df_v = pd.DataFrame({'val': val_split})
-		df_t = pd.DataFrame({'test': test_split})
+		df_t = pd.DataFrame({'sift_test': test_split})
 		df = pd.concat([df_tr, df_v, df_t], axis=1) 
 		df.to_csv(filename, index = False)
 

@@ -3,7 +3,7 @@
 ## Email: zhanghang0704@gmail.com
 ## Copyright (c) 2020
 ##
-## LICENSE file in the root directory of this source tree 
+## LICENSE ff in the root directory of this source tree
 ##+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 """ResNeSt ablation study models"""
 

@@ -3,7 +3,7 @@ import numpy as np
 import h5py
 from scipy import stats
 import pandas as pd
-from utils.vis_utils.heatmap_utils import initialize_wsi, drawHeatmap
+from SRIQ.utils.heatmap_utils import initialize_wsi, drawHeatmap
 import cv2
 import functools
 import multiprocessing
@@ -66,10 +66,10 @@ def features_p_values(ff, task):
                   'aaa': aaa, 'bbb': bbb}).to_csv(f'{ff}/center_patch_p_value_{task}.csv')
 
 
-def crop(slide, file, task):
-    if os.path.exists(f'{file}/{task}_new_crop_RGB/{slide}'):
+def crop(slide, ff, task):
+    if os.path.exists(f'{ff}/{task}_new_crop_RGB/{slide}'):
         return
-    img = cv2.imread(f'{file}/{task}_RGB/{slide}')
+    img = cv2.imread(f'{ff}/{task}_RGB/{slide}')
     img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     img_gray = np.uint8(img_gray)
     img_mask = np.uint8(np.where(img_gray == 255, 0, 255))
@@ -81,26 +81,26 @@ def crop(slide, file, task):
     img_mask = img_mask[y:y + h, x:x + w]
 
     if img_gray.shape == img_mask.shape:
-        cv2.imwrite(f'{file}/{task}_new_crop_RGB/{slide}', img)
+        cv2.imwrite(f'{ff}/{task}_new_crop_RGB/{slide}', img)
     else:
         print(slide, ' dim error')
 
 
-def my_crop(file, task):
-    os.makedirs(f'{file}/{task}_new_crop_RGB', exist_ok=True)
-    imgs = os.listdir(f'{file}/{task}_RGB')
+def my_crop(ff, task):
+    os.makedirs(f'{ff}/{task}_new_crop_RGB', exist_ok=True)
+    imgs = os.listdir(f'{ff}/{task}_RGB')
     pool = multiprocessing.Pool(10)
     for img in imgs:
         pool.apply_async(
-            functools.partial(crop, img, file, task)
+            functools.partial(crop, img, ff, task)
         )
     pool.close()
     pool.join()
 
 
-def draw_heatmap(slide_id, ff, tumor):
+def draw_heatmap(slide_id, ff, task):
 
-    if os.path.exists(f'{ff}/{tumor}_RGB/{slide_id}.jpg'):
+    if os.path.exists(f'{ff}/{task}_RGB/{slide_id}.jpg'):
         return
     slide_path = f'../Datasets/TCGA_GBMLGG/{slide_id}.svs'
 
@@ -121,7 +121,7 @@ def draw_heatmap(slide_id, ff, tumor):
     with h5py.File('patch_class_index/' + slide_id + '.h5', 'r') as hdf5_file:
         scores_buf = hdf5_file['index'][:]
 
-    df = pd.read_csv(f'{ff}/center_patch_p_value_{tumor}.csv')
+    df = pd.read_csv(f'{ff}/center_patch_p_value_{task}.csv')
     no_index = {}
     for i in range(256):
         key = df['class'][i] - 1
@@ -139,14 +139,14 @@ def draw_heatmap(slide_id, ff, tumor):
                           alpha=0.5, use_holes=True, binarize=False, vis_level=-1, scale=scale,
                           blank_canvas=True, thresh=-1, patch_size=patch_size, convert_to_percentiles=False)
 
-    heatmap.save(f'{ff}/{tumor}_RGB/{slide_id}.jpg')
+    heatmap.save(f'{ff}/{task}_RGB/{slide_id}.jpg')
 
 
 def my_heatmap(ff, task):
     np.random.seed(2023)
     ground_truth = pd.read_csv(f'../model_train/data_label/label_{task}.csv')
     datas = list(ground_truth['slide_id'])
-    os.makedirs(f'map/{ff}/{task}_RGB', exist_ok=True)
+    os.makedirs(f'{ff}/{task}_RGB', exist_ok=True)
     files = np.sort(os.listdir('../0_Cluster_data/features_100'))
     aa = [f.split('.h5')[0] for f in files if f.split('.h5')[0] in datas]
 
@@ -158,9 +158,8 @@ def my_heatmap(ff, task):
 
 
 if __name__ == '__main__':
-    ff = 'sort_by_p_value'
+    ff = 'map'
     for task in ['IDH']:
-        print('\nfeatures_p_values...')
         features_p_values(ff, task)
         print('\nheatmaping...')
         my_heatmap(ff, task)

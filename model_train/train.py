@@ -54,17 +54,19 @@ class LoadData_CLAM(Dataset):
         for slide in slides:
             self.epoch[slide] = 0
             s = slide.split('.h5')[0]
-            with h5py.File('../0_Extracted_feature/' + slide, 'r') as hdf5_file:
-                self.fea_all[slide] = hdf5_file['features'][:]
 
             with h5py.File('../0_Cluster_data/features_100/' + slide, 'r') as hdf5_file:
                 self.fea_center[slide] = hdf5_file['features'][:]
 
-            with h5py.File('../0_Random_index/random_sample_all/' + slide, 'r') as hdf5_file:
-                self.random_index[slide] = hdf5_file['index'][:]
-
-            img = Image.open(f'../SRIQ/sort_by_p_value/{args.tumor}/{s}.jpg').convert('RGB')
+            img = Image.open(f'../SRIQ/map/{args.task}/{s}.jpg').convert('RGB')
             self.map[slide] = self.transform_train(img) if self.train else self.transform_test(img)
+
+            if self.train:
+                with h5py.File('../0_Extracted_feature/' + slide, 'r') as hdf5_file:
+                    self.fea_all[slide] = hdf5_file['features'][:]
+
+                with h5py.File('../0_Random_index/random_sample_all/' + slide, 'r') as hdf5_file:
+                    self.random_index[slide] = hdf5_file['index'][:]
 
     def __getitem__(self, index):  # 返回真正想返回的东西
         slide, label = self.data[index]
@@ -82,8 +84,7 @@ class LoadData_CLAM(Dataset):
         else:
             fea = self.fea_center[slide]
             fea = torch.from_numpy(fea)
-            fea1 = self.fea_center[slide]
-            fea1 = torch.from_numpy(fea1)
+            fea1 = fea
 
         img = self.map[slide]
 
@@ -166,7 +167,7 @@ def predict(args, ii, model, device):
     test_steps = len(test_loader)
 
     weight_path = os.path.join(args.eval_path, f'weight_fold_{ii}.pth')
-    assert os.path.exists(weight_path), "file: '{}' dose not exist.".format(weight_path)
+    assert os.path.exists(weight_path), "ff: '{}' dose not exist.".format(weight_path)
     model.load_state_dict(torch.load(weight_path, map_location=device))
 
     model.eval()
@@ -235,7 +236,7 @@ def train(args, settings, ii):
     val_num = len(val_data)
     net = args.net.to(device)
 
-    weight_path = "model_train/resnet18-f37072fd.pth"
+    weight_path = "./resnet18-f37072fd.pth"
     net.resnet.load_state_dict(torch.load(weight_path, map_location=device), strict=False)
 
     loss_function = nn.CrossEntropyLoss(weight=args.weight_CE.to(device))
@@ -259,7 +260,7 @@ def train(args, settings, ii):
     print('batch_total:', train_steps)
 
     early_stopping = EarlyStopping(patience=20, verbose=True,
-                                   path=os.path.join(args.eval_path, f'weight_fold_{ii}.pth'))
+                                   path=os.path.join(args.eval_path, args.task, f'weight_fold_{ii}.pth'))
 
     for epoch in range(args.epochs):
         time1 = time.time()
@@ -406,34 +407,31 @@ if __name__ == '__main__':
     parser.add_argument('--drop', default=0.5, type=float)
     parser.add_argument('--drop_att', default=0.5, type=float)
     parser.add_argument('--weight_decay', default=5e-5, type=float)
-    parser.add_argument('--cos_lr', default=False, type=bool)
     parser.add_argument('--batchsize', default=32, type=str)
     parser.add_argument('--seed', default=2023, type=str)
+    parser.add_argument('--task', default='IDH', type=str)
     parser.add_argument('--bb', default=0.1, type=float)
     parser.add_argument('--cc', default=0.1, type=float)
     args = parser.parse_args()
 
-    for file in ['IDH', 'Grading']:
-        args.tumor = file
-        ES_acc, ES_auc, ES_f1 = [], [], []
-        for ii in range(args.k):
-            seed_torch(args.seed)
-            args.net = DPPA(args.drop, args.drop_att, 512)
+    ES_acc, ES_auc, ES_f1 = [], [], []
+    for ii in range(args.k):
+        seed_torch(args.seed)
+        args.net = DPPA(args.drop, args.drop_att, 512)
 
-            args.train_txt = f'data_label/{file}/fold_{ii}/train.txt'
-            args.val_txt = f'data_label/{file}/fold_{ii}/val.txt'
-            args.test_txt = f'data_label/{file}/fold_{ii}/test.txt'
+        args.train_txt = f'data_label/{args.task}/fold_{ii}/train.txt'
+        args.val_txt = f'data_label/{args.task}/fold_{ii}/val.txt'
+        args.test_txt = f'data_label/{args.task}/fold_{ii}/test.txt'
 
-            args.eval_path = 'eval/' + file
+        args.eval_path = 'eval/' + args.task
 
-            os.makedirs(args.eval_path, exist_ok=True)
+        os.makedirs(args.eval_path, exist_ok=True)
 
-            settings = {'model': args.model, 'dropout': args.drop, 'k': args.k, 'epochs': args.epochs,
-                        'lr': args.lr, 'cos_lr': args.cos_lr, 'loss': args.loss, 'weight': args.weight_CE,
-                        'eval_path': args.eval_path, 'seed': args.seed}
+        settings = {'dropout': args.drop, 'k': args.k, 'epochs': args.epochs,
+                    'lr': args.lr, 'eval_path': args.eval_path, 'seed': args.seed}
 
-            train(args, settings, ii)
-        if len(ES_acc) > 0:
-            print('ES_mean_acc:', np.array(ES_acc).mean())
-            print('ES_mean_auc:', np.array(ES_auc).mean())
-            print('ES_mean_f1:', np.array(ES_f1).mean())
+        train(args, settings, ii)
+    if len(ES_acc) > 0:
+        print('ES_mean_acc:', np.array(ES_acc).mean())
+        print('ES_mean_auc:', np.array(ES_auc).mean())
+        print('ES_mean_f1:', np.array(ES_f1).mean())

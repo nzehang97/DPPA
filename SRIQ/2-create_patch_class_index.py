@@ -39,8 +39,6 @@ def process_slide(slide_path):
 
 # 使用joblib并行处理slide
 from joblib import Parallel, delayed
-import multiprocessing
-# num_cores = multiprocessing.cpu_count()
 num_cores = 10
 
 Parallel(n_jobs=num_cores)(delayed(process_slide)(path) for path in slide_paths)

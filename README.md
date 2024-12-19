@@ -59,7 +59,7 @@ python train.py --task 'IDH'
 
 
 
-## Test
+## Predict
 
 Pre-trained weights and publicly available data can be download at [Link](https://pan.baidu.com/s/17FnGF1EYL2nTmj12sa3LGw?pwd=7r7j), if not available, please contact the corresponding author.
 
@@ -72,7 +72,7 @@ python predict.py --task 'IDH'
 
 
 
-## predict
+## Test
 
 The molecular typing prediction of IDH can be performed after the previous preprocessing of the sections that need to be predicted
 

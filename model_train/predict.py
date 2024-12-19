@@ -81,7 +81,6 @@ if __name__ == '__main__':
         print(f'-----------fold{ii}--------------')
         model = DPPA()
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        args.eval_path = './eval/' + args.task
         test_acc, test_auc, f1_score = predict(args, ii, model, device)  # 获取这一轮的结果
         all_test_acc.append(test_acc)
         all_test_auc.append(test_auc)

@@ -61,7 +61,7 @@ python train.py --task 'IDH'
 
 ## Predict
 
-Pre-trained weights and publicly available data can be download at [Link](https://pan.baidu.com/s/17FnGF1EYL2nTmj12sa3LGw?pwd=7r7j), if not available, please contact the corresponding author.
+Pre-trained weights and publicly available data can be download at [Link](https://pan.baidu.com/s/17FnGF1EYL2nTmj12sa3LGw?pwd=7r7j), if not available, please contact zhning22@m.fudan.edu.cn.
 
 ```
 cd model_train

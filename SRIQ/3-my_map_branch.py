@@ -3,7 +3,7 @@ import numpy as np
 import h5py
 from scipy import stats
 import pandas as pd
-from SRIQ.utils.heatmap_utils import initialize_wsi, drawHeatmap
+from utils.heatmap_utils import initialize_wsi, drawHeatmap
 import cv2
 import functools
 import multiprocessing
@@ -111,8 +111,9 @@ def draw_heatmap(slide_id, ff, task):
     scale = 33
     try:
         wsi_object = initialize_wsi(slide_path, seg_params=seg_params, filter_params=filter_params, scale=scale)
+        print(slide_path)
     except:
-        print(slide_id)
+        # print(slide_id,  'openslide err')
         return
 
     with h5py.File('../0_Extracted_feature/' + slide_id + '.h5', 'r') as hdf5_file:
@@ -149,7 +150,7 @@ def my_heatmap(ff, task):
     os.makedirs(f'{ff}/{task}_RGB', exist_ok=True)
     files = np.sort(os.listdir('../0_Cluster_data/features_100'))
     aa = [f.split('.h5')[0] for f in files if f.split('.h5')[0] in datas]
-
+ 
     pool = multiprocessing.Pool(10)
     for slide_id in aa:
         pool.apply_async(functools.partial(draw_heatmap, slide_id, ff, task))

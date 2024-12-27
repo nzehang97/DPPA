@@ -2,7 +2,8 @@ from utils import *
 from data.wsi_dataset import Wsi_Region
 from wsi_core.WholeSlideImage import WholeSlideImage
 import math
-from file_utils import save_hdf5
+import torch
+from utils.file_utils import save_hdf5
 from scipy.stats import percentileofscore
 
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
